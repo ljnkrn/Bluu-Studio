@@ -531,7 +531,7 @@
     pointer-events: none;
   }
 
-  /* Non-destructive Pink Trim Handles (Dedicated Left & Right In/Out Trimming) */
+  /* Non-destructive Pink Trim Handles */
   .trim-handle {
     position: absolute;
     top: -3px;
@@ -754,10 +754,6 @@
     cursor: pointer;
   }
 
-  .speed-slider {
-    background: linear-gradient(90deg, #FF8FA3 0%, #FFC0CB 50%, #FFE5EC 100%) !important;
-  }
-
   .pill-btn {
     background: var(--card);
     border: 1px solid var(--pink-border);
@@ -840,7 +836,7 @@
     display: none;
   }
 
-  /* ==================== ADDITIONS: PRA-POTONG (PICT 2), KECEPATAN (PICT 3), EKSTRAK AUDIO ==================== */
+  /* PRA-POTONG, KECEPATAN, STABILKAN */
   .pp-tabs {
     display: flex;
     align-items: center;
@@ -997,7 +993,6 @@
     background: rgba(255, 255, 255, 0.14);
   }
 
-  /* Kecepatan (Pict 3) */
   .spd-seg-wrap {
     display: inline-flex;
     background: #262626;
@@ -1129,7 +1124,6 @@
   }
   .kurva-presets::-webkit-scrollbar { display: none; }
 
-  /* Stabilkan (Pict 2 exact layout, #ADD7FF active outline, #FFC0CB font) */
   .stab-title-group {
     display: inline-flex;
     align-items: center;
@@ -1497,7 +1491,7 @@
       </div>
     </div>
 
-    <!-- SUB-PANEL: KECEPATAN (PICT 3 EXACT LAYOUT) -->
+    <!-- SUB-PANEL: KECEPATAN -->
     <div class="sub-panel" id="panelKecepatan" style="padding:6px 12px 6px;">
       <div class="sub-header" style="position:relative;">
         <button class="icon-btn" data-close-panel="kecepatan" style="opacity:0.65;font-size:14px;">✕</button>
@@ -1552,7 +1546,7 @@
       </div>
     </div>
 
-    <!-- SUB-PANEL: PRA-POTONG (PICT 2 EXACT LAYOUT) -->
+    <!-- SUB-PANEL: PRA-POTONG -->
     <div class="sub-panel" id="panelPrapotong" style="padding:4px 12px 6px;">
       <div class="sub-header" style="height:28px;">
         <button class="icon-btn" data-close-panel="prapotong" style="opacity:0.6;font-size:13px;">✕</button>
@@ -1686,7 +1680,7 @@
       </div>
     </div>
 
-    <!-- SUB-PANEL: STABILKAN (PICT 2 EXACT LAYOUT) -->
+    <!-- SUB-PANEL: STABILKAN -->
     <div class="sub-panel" id="panelStabilkan" style="padding:4px 12px 6px;">
       <div class="sub-header" style="height:28px;">
         <button class="icon-btn" data-close-panel="stabilkan" style="opacity:0.6;font-size:13px;">✕</button>
@@ -1756,7 +1750,7 @@
 <div id="exportModal">
   <div class="modal-box">
     <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Menyimpan Video...</div>
-    <div id="exportResInfo" style="font-size:11.5px;color:var(--muted);">Resolusi Asli • Kualitas Terjaga</div>
+    <div id="exportResInfo" style="font-size:11.5px;color:var(--muted);">Resolusi Asli • Video + Audio</div>
     <div class="progress-bar-bg">
       <div class="progress-bar-fill" id="exportProgressFill"></div>
     </div>
@@ -1833,6 +1827,7 @@
     selectedClipId: null,
     currentTime: 0,
     isPlaying: false,
+    isExporting: false,
     pxPerSec: 65,
     keyframeModeActive: false,
     activePanel: null,
@@ -1883,7 +1878,7 @@
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(t._timer);
-    t._timer = setTimeout(() => t.classList.remove('show'), 2100);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2200);
   }
 
   function formatTime(sec) {
@@ -1921,7 +1916,6 @@
     return state.clips.find(c => c.id === state.selectedClipId) || state.clips[0] || null;
   }
 
-  // Maps visual timeline time (including any leadGapSec from trimStart) to the active clip
   function getClipAtTime(t) {
     let acc = 0;
     for (let i = 0; i < state.clips.length; i++) {
@@ -1937,21 +1931,7 @@
     return null;
   }
 
-  // Maps compact export time (0..getTotalDuration, no empty leading gaps) to the active clip
-  function getClipAtCompactTime(t) {
-    let acc = 0;
-    for (let i = 0; i < state.clips.length; i++) {
-      const c = state.clips[i];
-      const d = getClipDuration(c);
-      if (t <= acc + d + 0.0001 || i === state.clips.length - 1) {
-        return { clip: c, start: acc, duration: d, localTime: Math.max(0, Math.min(d, t - acc)) };
-      }
-      acc += d;
-    }
-    return null;
-  }
-
-  /* ==================== INSHOT KEYFRAME AUTO-ON / AUTO-OFF ==================== */
+  /* ==================== KEYFRAME STATE ==================== */
   function setKeyframeMode(active) {
     state.keyframeModeActive = !!active;
     updateKeyframeButtonUI();
@@ -2019,7 +1999,7 @@
     return base;
   }
 
-  /* ==================== INSTANT & RELIABLE GALLERY VIDEO LOADING ==================== */
+  /* ==================== GALLERY VIDEO LOADING ==================== */
   function openGalleryPicker() {
     galleryInput.value = '';
     galleryInput.click();
@@ -2046,7 +2026,6 @@
     }
   }
 
-  // Non-blocking background filmstrip generator with guaranteed frame decode (never black!)
   function generateFilmstripInBackground(clipId, videoUrl, duration) {
     const tempVid = document.createElement('video');
     tempVid.src = videoUrl;
@@ -2130,7 +2109,7 @@
     vid.setAttribute('playsinline', '');
     vid.setAttribute('webkit-playsinline', '');
     vid.preload = 'auto';
-    vid.muted = true; // Muted during initial load so Android Chrome decodes frame 0 instantaneously!
+    vid.muted = true;
 
     const loaded = await new Promise((resolve) => {
       let settled = false;
@@ -2141,23 +2120,12 @@
         resolve(ok);
       };
 
-      // Resolve as soon as metadata OR first frame is ready (zero artificial delay)
-      vid.onloadedmetadata = () => {
-        if (vid.videoWidth > 0) done(true);
-      };
-      vid.onloadeddata = () => {
-        if (vid.videoWidth > 0) done(true);
-      };
-      vid.oncanplay = () => {
-        if (vid.videoWidth > 0) done(true);
-      };
+      vid.onloadedmetadata = () => { if (vid.videoWidth > 0) done(true); };
+      vid.onloadeddata = () => { if (vid.videoWidth > 0) done(true); };
+      vid.oncanplay = () => { if (vid.videoWidth > 0) done(true); };
       vid.onerror = () => done(false);
 
-      // Generous 20s safety guard for large 4K gallery files
-      const timer = setTimeout(() => {
-        done(vid.videoWidth > 0);
-      }, 20000);
-
+      const timer = setTimeout(() => done(vid.videoWidth > 0), 20000);
       vid.load();
     });
 
@@ -2167,7 +2135,6 @@
       return;
     }
 
-    // Restore unmuted state after initial frame decode
     vid.muted = false;
 
     const clipId = 'clip_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
@@ -2225,12 +2192,11 @@
     syncVideoToPlayhead(true);
     scheduleAutoSave();
 
-    // Generate filmstrip thumbnails asynchronously in the background without blocking UI
     generateFilmstripInBackground(clipId, url, dur);
     showToast(`Dimuat (${vid.videoWidth}×${vid.videoHeight})`);
   }
 
-  /* ==================== TIMELINE RENDERING & INDEPENDENT IN/OUT TRIM HANDLES ==================== */
+  /* ==================== TIMELINE RENDERING ==================== */
   function renderTimeline() {
     const scrollerWidth = trackScroller.clientWidth || window.innerWidth;
     const halfPad = Math.floor(scrollerWidth / 2);
@@ -2256,7 +2222,6 @@
       block.style.width = `${widthPx}px`;
       block.dataset.clipId = clip.id;
 
-      // Filmstrip thumbnails
       const strip = document.createElement('div');
       strip.className = 'clip-strip';
       const media = mediaPool.get(clip.id);
@@ -2281,13 +2246,11 @@
       }
       block.appendChild(strip);
 
-      // Duration badge
       const badge = document.createElement('div');
       badge.className = 'clip-dur-tag';
       badge.textContent = dur.toFixed(1) + 's';
       block.appendChild(badge);
 
-      // Keyframe diamonds
       (clip.keyframes || []).forEach((kf) => {
         const relTimelineSec = (kf.time - clip.trimStart) / (clip.speed || 1);
         if (relTimelineSec >= -0.05 && relTimelineSec <= dur + 0.05) {
@@ -2306,7 +2269,6 @@
         }
       });
 
-      // Left (In-Point) & Right (Out-Point) Non-Destructive Pink Trim Handles
       if (isSelected) {
         const leftHandle = document.createElement('div');
         leftHandle.className = 'trim-handle left';
@@ -2329,7 +2291,6 @@
       clipsRow.appendChild(block);
     });
 
-    // Ruler Ticks
     rulerRow.innerHTML = '';
     const stepSec = state.pxPerSec >= 110 ? 1 : 2;
     for (let s = 0; s <= Math.ceil(totalVisDur); s += stepSec) {
@@ -2354,7 +2315,7 @@
     updateKeyframeButtonUI();
   }
 
-  /* ==================== FIXED IN-POINT (LEFT) & OUT-POINT (RIGHT) TRIM HANDLES ==================== */
+  /* ==================== TRIM HANDLES ==================== */
   let isTrimmingHandle = false;
   let lockedTrimScrollLeft = 0;
   let trimLockRafId = null;
@@ -2384,13 +2345,12 @@
     let initTrimEnd = 0;
     let initLeadGap = 0;
     let dragging = false;
-    let dragSource = null; // 'touch' | 'mouse'
+    let dragSource = null;
     let activeTouchId = null;
     let activePointerId = null;
 
     const beginTrim = (source, clientX, id) => {
       if (dragging) return;
-
       if (state.isPlaying) togglePlay(false);
       clearTimeout(scrubReleaseTimer);
       isUserScrubbingTrack = false;
@@ -2406,7 +2366,6 @@
       initTrimEnd = clip.trimEnd;
       initLeadGap = clip.leadGapSec || 0;
 
-      // Lock trackScroller completely so ONLY the trim handle moves (zero track scroll!)
       trackScroller.style.overflowX = 'hidden';
       trackScroller.style.touchAction = 'none';
       startTrimScrollLock();
@@ -2432,7 +2391,6 @@
 
     const updateTrimWithX = (clientX) => {
       if (!dragging) return;
-
       const dx = clientX - startX;
       const speed = clip.speed || 1;
       const deltaSrcSec = (dx / state.pxPerSec) * speed;
@@ -2443,7 +2401,6 @@
       trackScroller.scrollLeft = lockedTrimScrollLeft;
 
       if (side === 'left') {
-        // LEFT HANDLE (trimStart): moves forward & backward freely while track, thumbnails & right end stay stationary
         const nextStart = Math.max(0, Math.min(initTrimEnd - minSrcSpan, initTrimStart + deltaSrcSec));
         const actualDeltaTimeline = (nextStart - initTrimStart) / speed;
         clip.trimStart = nextStart;
@@ -2463,7 +2420,6 @@
           try { media.videoEl.currentTime = clip.trimStart; } catch (_) {}
         }
       } else {
-        // RIGHT HANDLE (trimEnd): moves forward & backward freely while track, thumbnails & left end stay stationary
         const nextEnd = Math.min(clip.rawDuration, Math.max(initTrimStart + minSrcSpan, initTrimEnd + deltaSrcSec));
         clip.trimEnd = nextEnd;
 
@@ -2501,7 +2457,6 @@
       trackScroller.style.overflowX = 'auto';
       trackScroller.style.touchAction = 'pan-x';
 
-      // Keep trackScroller.scrollLeft & state.currentTime at the exact current position so NOTHING jumps on release!
       state.currentTime = lockedTrimScrollLeft / state.pxPerSec;
       isProgrammaticScroll = true;
       renderTimeline();
@@ -2554,7 +2509,6 @@
       finishTrim();
     };
 
-    // Dedicated Touch stream (never cancelled by Chromium pointercancel)
     handleEl.addEventListener('touchstart', (e) => {
       e.stopPropagation();
       if (e.cancelable) e.preventDefault();
@@ -2564,7 +2518,6 @@
       beginTrim('touch', t.clientX, t.identifier);
     }, { passive: false });
 
-    // Dedicated Mouse / Stylus stream
     handleEl.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'touch') return;
       e.stopPropagation();
@@ -2600,7 +2553,7 @@
   }
 
   function beginUserTrackScrub() {
-    if (isTrimmingHandle) return;
+    if (isTrimmingHandle || state.isExporting) return;
     clearTimeout(scrubReleaseTimer);
     if (!isUserScrubbingTrack) {
       isUserScrubbingTrack = true;
@@ -2651,8 +2604,8 @@
     pinnedControls.style.opacity = trackScroller.scrollLeft > 18 ? '0' : '1';
     pinnedControls.style.pointerEvents = trackScroller.scrollLeft > 18 ? 'none' : 'auto';
 
-    if (isTrimmingHandle) {
-      trackScroller.scrollLeft = lockedTrimScrollLeft;
+    if (isTrimmingHandle || state.isExporting) {
+      if (isTrimmingHandle) trackScroller.scrollLeft = lockedTrimScrollLeft;
       return;
     }
     if (isProgrammaticScroll) return;
@@ -2684,7 +2637,6 @@
     }
   });
 
-  // Two-finger pinch on timeline track to expand/contract clips
   let pinchStartDist = 0;
   let pinchStartPxPerSec = 65;
 
@@ -2716,6 +2668,7 @@
 
   /* ==================== VIDEO SYNC & CANVAS RENDERER ==================== */
   function syncVideoToPlayhead(forceSeek) {
+    if (state.isExporting) return;
     const info = getClipAtTime(state.currentTime);
     if (!info) return;
     const { clip, localTime } = info;
@@ -2828,7 +2781,6 @@
       }
     }
 
-    // Text Overlay
     if (state.textOverlay && state.textOverlay.text.trim()) {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       ctx.save();
@@ -2845,7 +2797,6 @@
       ctx.restore();
     }
 
-    // InShot Adaptive Aspect-Ratio Grid & 3-Edge / Top-Bottom Red Snap Borders (Pict 2, 3, 4)
     if (state.activePanel === 'kanvas' || state.isDraggingCanvas || state.isZoomingCanvas) {
       drawInShotAdaptiveGrid(cw, ch);
     }
@@ -2856,12 +2807,10 @@
     const b = Math.max(2, Math.round(2.5 * dpr));
     ctx.save();
 
-    // Subtle outer guide border matching selected aspect ratio (9:16, 1:1, 4:5, 16:9, etc.)
     ctx.lineWidth = 1.2 * dpr;
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.strokeRect(1, 1, cw - 2, ch - 2);
 
-    // Center white/pink tick guides (matching Pict 2, 3, 4)
     ctx.lineWidth = 1.5 * dpr;
     ctx.strokeStyle = state.snapX ? '#FF3B5C' : 'rgba(255, 255, 255, 0.78)';
     ctx.beginPath();
@@ -2881,11 +2830,9 @@
     }
     ctx.stroke();
 
-    // Red Boundary Lines (#FF3B5C) - Exact Pict 2, Pict 3, Pict 4 behavior!
     ctx.lineWidth = 3.5 * dpr;
     ctx.strokeStyle = '#FF3B5C';
 
-    // Top & Bottom red borders light up when top/bottom edge aligns with canvas frame OR zoom fits frame (Pict 4)
     if (state.edgeHit.top || state.edgeHit.fitFill) {
       ctx.beginPath();
       ctx.moveTo(0, b); ctx.lineTo(cw, b);
@@ -2896,15 +2843,11 @@
       ctx.moveTo(0, ch - b); ctx.lineTo(cw, ch - b);
       ctx.stroke();
     }
-
-    // Right edge hit -> Top + Bottom + Right red lines form 3-sided bracket (Pict 2)
     if (state.edgeHit.right) {
       ctx.beginPath();
       ctx.moveTo(cw - b, 0); ctx.lineTo(cw - b, ch);
       ctx.stroke();
     }
-
-    // Left edge hit -> Top + Bottom + Left red lines form 3-sided bracket (Pict 3)
     if (state.edgeHit.left) {
       ctx.beginPath();
       ctx.moveTo(b, 0); ctx.lineTo(b, ch);
@@ -2914,7 +2857,7 @@
     ctx.restore();
   }
 
-  /* ==================== DIRECT CANVAS PAN / PINCH WITH EXACT 3-SIDE & ZOOM FIT SNAP ==================== */
+  /* ==================== DIRECT CANVAS PAN / PINCH ==================== */
   let canvasPointers = new Map();
   let lastPanCenter = null;
   let initialPinchDist = 0;
@@ -2928,7 +2871,6 @@
     const ch = previewCanvas.height || 1920;
     const fitScale = Math.min(cw / clip.width, ch / clip.height);
 
-    // Exact zoom required to fill the selected aspect ratio frame (e.g., 9:16 fill zoom)
     const fillZoom = Math.max(cw / clip.width, ch / clip.height) / fitScale;
     const zoomFitTol = 0.035;
     let isZoomFit = false;
@@ -2940,49 +2882,36 @@
     const halfDrawW = (clip.width * fitScale * newZoom) / 2;
     const halfDrawH = (clip.height * fitScale * newZoom) / 2;
 
-    // Magnetic center snap
     const snapTol = 0.016;
     state.snapX = Math.abs(newPanX) < snapTol;
     state.snapY = Math.abs(newPanY) < snapTol;
     if (state.snapX) newPanX = 0;
     if (state.snapY) newPanY = 0;
 
-    // Edge bounds (handles both zoomed-in panning and zoomed-out inner alignment)
     const maxOffsetX = Math.abs(cw / 2 - halfDrawW) / cw;
     const maxOffsetY = Math.abs(ch / 2 - halfDrawH) / ch;
     const edgeTol = 0.012;
 
     state.edgeHit = { left: false, right: false, top: false, bottom: false, fitFill: isZoomFit };
 
-    // Left & Right edge clamping & 3-sided red guide detection (Pict 2 & Pict 3)
     if (newPanX <= -maxOffsetX + edgeTol) {
       newPanX = -maxOffsetX;
-      // When panned all the way to the left limit, the video's RIGHT edge aligns with the canvas right border (Pict 2)
-      // or if zoomed out, its LEFT edge aligns with canvas left border (Pict 3)
-      if (halfDrawW >= cw / 2) {
-        state.edgeHit.right = true;
-      } else {
-        state.edgeHit.left = true;
-      }
+      if (halfDrawW >= cw / 2) state.edgeHit.right = true;
+      else state.edgeHit.left = true;
       if (halfDrawH >= ch / 2 - 2) {
         state.edgeHit.top = true;
         state.edgeHit.bottom = true;
       }
     } else if (newPanX >= maxOffsetX - edgeTol) {
       newPanX = maxOffsetX;
-      // When panned all the way to the right limit, the video's LEFT edge aligns with the canvas left border (Pict 3)
-      if (halfDrawW >= cw / 2) {
-        state.edgeHit.left = true;
-      } else {
-        state.edgeHit.right = true;
-      }
+      if (halfDrawW >= cw / 2) state.edgeHit.left = true;
+      else state.edgeHit.right = true;
       if (halfDrawH >= ch / 2 - 2) {
         state.edgeHit.top = true;
         state.edgeHit.bottom = true;
       }
     }
 
-    // Top & Bottom edge clamping & red guide detection (Pict 4)
     if (newPanY <= -maxOffsetY + edgeTol) {
       newPanY = -maxOffsetY;
       state.edgeHit.top = true;
@@ -3124,21 +3053,23 @@
     const dt = (now - lastTickTime) / 1000;
     lastTickTime = now;
 
-    if (state.isPlaying && !isUserScrubbingTrack) {
-      const firstVis = state.clips[0] ? (state.clips[0].leadGapSec || 0) : 0;
-      const total = getTotalVisualDuration();
-      if (state.currentTime < firstVis) state.currentTime = firstVis;
-      state.currentTime += dt;
-      if (state.currentTime >= total) {
-        state.currentTime = firstVis;
-        togglePlay(false);
+    if (!state.isExporting) {
+      if (state.isPlaying && !isUserScrubbingTrack) {
+        const firstVis = state.clips[0] ? (state.clips[0].leadGapSec || 0) : 0;
+        const total = getTotalVisualDuration();
+        if (state.currentTime < firstVis) state.currentTime = firstVis;
+        state.currentTime += dt;
+        if (state.currentTime >= total) {
+          state.currentTime = firstVis;
+          togglePlay(false);
+        }
+        updateScrollPositionFromTime();
+        syncVideoToPlayhead(false);
+        updateKeyframeButtonUI();
       }
-      updateScrollPositionFromTime();
-      syncVideoToPlayhead(false);
-      updateKeyframeButtonUI();
+      renderFrame();
     }
 
-    renderFrame();
     requestAnimationFrame(mainLoop);
   }
 
@@ -3343,7 +3274,6 @@
     state.edgeHit = { left: false, right: false, top: false, bottom: false, fitFill: false };
   });
 
-  // One-tap Fit Frame ("Pas Bingkai") button to snap zoom directly to selected aspect ratio frame
   document.getElementById('btnFitFrame').addEventListener('click', () => {
     const clip = getSelectedClip();
     if (!clip) return;
@@ -3363,8 +3293,6 @@
     if (state.lockRotation && getSelectedClip()) getSelectedClip().baseRot = 0;
   });
 
-  /* ==================== KECEPATAN (PICT 3: STANDAR / KURVA, 0.2..100, HALUS) ==================== */
-  // Non-linear scale matching Pict 3 ticks: 0.2 (0%), 1.0 (25%), 2.0 (50%), 10.0 (75%), 100.0 (100%)
   function speedToPercent(spd) {
     const s = Math.max(0.2, Math.min(100, spd || 1));
     if (s <= 1) return ((s - 0.2) / 0.8) * 25;
@@ -3380,7 +3308,6 @@
     else if (p <= 50) raw = 1 + ((p - 25) / 25) * 1;
     else if (p <= 75) raw = 2 + ((p - 50) / 25) * 8;
     else raw = 10 + ((p - 75) / 25) * 90;
-    // Snap gently to 1.00 when close
     if (Math.abs(raw - 1.0) < 0.04) raw = 1.0;
     return raw < 10 ? Math.round(raw * 100) / 100 : Math.round(raw * 10) / 10;
   }
@@ -3478,9 +3405,9 @@
     });
   });
 
-  /* ==================== PRA-POTONG (PICT 2: TRIM / CUT / SPLIT + FILMSTRIP + FRAME STEP) ==================== */
+  /* ==================== PRA-POTONG ==================== */
   const ppState = {
-    mode: 'trim', // 'trim' | 'cut' | 'split'
+    mode: 'trim',
     inSec: 0,
     outSec: 5,
     splitSec: 2.5,
@@ -3499,7 +3426,6 @@
       t.classList.toggle('active', t.dataset.ppMode === 'trim');
     });
 
-    // Populate thumbnails inside Pra-potong filmstrip
     const row = document.getElementById('ppThumbsRow');
     row.innerHTML = '';
     const media = mediaPool.get(clip.id);
@@ -3544,7 +3470,6 @@
       document.getElementById('ppHandleLeft').style.display = 'flex';
       document.getElementById('ppHandleRight').style.display = 'flex';
     } else if (ppState.mode === 'cut') {
-      // Cut mode: outer ranges are kept, middle range is dimmed to be cut out
       dimLeft.style.width = '0%';
       dimRight.style.width = '0%';
       dimMid.style.display = 'block';
@@ -3556,7 +3481,6 @@
       document.getElementById('ppHandleLeft').style.display = 'flex';
       document.getElementById('ppHandleRight').style.display = 'flex';
     } else {
-      // Split mode
       dimLeft.style.width = '0%';
       dimRight.style.width = '0%';
       dimMid.style.display = 'none';
@@ -3640,7 +3564,6 @@
   bindPpHandleDrag(document.getElementById('ppHandleLeft'), 'left');
   bindPpHandleDrag(document.getElementById('ppHandleRight'), 'right');
 
-  // Scrub inside Pra-potong filmstrip
   const ppStripWrap = document.getElementById('ppStripWrap');
   let scrubbingPp = false;
   ppStripWrap.addEventListener('pointerdown', (e) => {
@@ -3724,7 +3647,6 @@
       renderTimeline();
       syncVideoToPlayhead(true);
     } else if (ppState.mode === 'cut') {
-      // Remove middle [inSec..outSec] and keep [0..inSec] + [outSec..rawDuration]
       const origMedia = mediaPool.get(clip.id);
       const secondId = 'clip_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
       if (origMedia) {
@@ -3817,7 +3739,7 @@
     writeStr(8, 'WAVE');
     writeStr(12, 'fmt ');
     view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true); // PCM
+    view.setUint16(20, 1, true);
     view.setUint16(22, numCh, true);
     view.setUint32(24, sampleRate, true);
     view.setUint32(28, sampleRate * blockAlign, true);
@@ -3872,7 +3794,6 @@
       document.getElementById('btnSaveExtractedWav').style.display = 'inline-block';
       showToast('Audio video berhasil diekstrak!');
     } catch (err) {
-      // Fallback: load video container strictly as audio-only stream without displaying video
       if (bgmAudioEl) bgmAudioEl.pause();
       state.bgmBlob = file;
       state.bgmName = file.name || 'Audio Video';
@@ -3957,7 +3878,7 @@
     });
   });
 
-  /* ==================== STABILKAN (PICT 2: ASLI / RENDAH / STANDAR / PALING STABIL + FILMSTRIP) ==================== */
+  /* ==================== STABILKAN ==================== */
   function ensureStabVectors(clip) {
     const media = mediaPool.get(clip.id);
     if (media && (!media.stabVectors || !media.stabVectors.length)) {
@@ -4098,330 +4019,42 @@
     syncVideoToPlayhead(true);
   });
 
-  /* ==================== UNIVERSAL H.264 MP4 MUXER & EXPORT (100% PLAYABLE IN ALL GALLERIES) ==================== */
-  // Pure-JS ISO-BMFF (MP4) FastStart Muxer for H.264 (avc1) + AAC (mp4a) so exported files play natively
-  // in Samsung Gallery, Android Photos, iOS Photos, Windows, Mac, Instagram, TikTok, and Telegram.
-  class UniversalMP4Muxer {
-    constructor(width, height, fps) {
-      this.width = width;
-      this.height = height;
-      this.fps = fps;
-      this.timescale = 90000;
-      this.videoSamples = [];
-      this.avcC = null;
-    }
+  /* ==================== FIXED EXPORT ENGINE: ZERO BLACK SCREEN + FULL AUDIO MIX ==================== */
+  let sharedExportAudioCtx = null;
+  const mediaAudioSourceCache = new WeakMap();
 
-    // Convert Annex-B start-code NALUs to 4-byte length-prefixed AVCC & extract SPS/PPS for avcC box
-    addVideoChunk(dataUint8, isKey, timestampUs, durationUs) {
-      const nalus = this._splitAnnexB(dataUint8);
-      const avccParts = [];
-      let totalLen = 0;
-
-      for (const nalu of nalus) {
-        if (!nalu.length) continue;
-        const naluType = nalu[0] & 0x1f;
-        if (naluType === 7 && !this._sps) {
-          this._sps = nalu;
-        } else if (naluType === 8 && !this._pps) {
-          this._pps = nalu;
-        }
-        if (this._sps && this._pps && !this.avcC) {
-          this.avcC = this._buildAvcC(this._sps, this._pps);
-        }
-        if (naluType === 7 || naluType === 8) continue; // stored in avcC header
-        const lenBuf = new Uint8Array(4);
-        new DataView(lenBuf.buffer).setUint32(0, nalu.length, false);
-        avccParts.push(lenBuf, nalu);
-        totalLen += 4 + nalu.length;
-      }
-
-      if (totalLen === 0) return;
-      const sampleData = new Uint8Array(totalLen);
-      let off = 0;
-      for (const p of avccParts) {
-        sampleData.set(p, off);
-        off += p.length;
-      }
-
-      const durTicks = Math.max(1, Math.round((durationUs / 1_000_000) * this.timescale));
-      this.videoSamples.push({
-        data: sampleData,
-        isKey,
-        duration: durTicks
-      });
-    }
-
-    _splitAnnexB(buf) {
-      // Check if already AVCC length-prefixed vs Annex-B 00 00 01 / 00 00 00 01
-      const nalus = [];
-      let i = 0;
-      const n = buf.length;
-      let start = -1;
-      while (i < n - 2) {
-        if (buf[i] === 0 && buf[i + 1] === 0 && (buf[i + 2] === 1 || (i + 3 < n && buf[i + 2] === 0 && buf[i + 3] === 1))) {
-          if (start >= 0) nalus.push(buf.subarray(start, i));
-          i += buf[i + 2] === 1 ? 3 : 4;
-          start = i;
-        } else {
-          i++;
-        }
-      }
-      if (start >= 0 && start < n) {
-        nalus.push(buf.subarray(start, n));
-      } else if (nalus.length === 0 && n > 4) {
-        // Fallback: parse as 4-byte length prefixed AVCC
-        let p = 0;
-        const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
-        while (p + 4 <= n) {
-          const len = dv.getUint32(p, false);
-          p += 4;
-          if (len > 0 && p + len <= n) {
-            nalus.push(buf.subarray(p, p + len));
-            p += len;
-          } else {
-            break;
-          }
-        }
-      }
-      return nalus;
-    }
-
-    _buildAvcC(sps, pps) {
-      const out = new Uint8Array(11 + sps.length + pps.length);
-      out[0] = 1; // configurationVersion
-      out[1] = sps[1] || 0x42; // AVCProfileIndication (Baseline/Main)
-      out[2] = sps[2] || 0xE0; // profile_compatibility
-      out[3] = sps[3] || 0x1F; // AVCLevelIndication
-      out[4] = 0xFF; // 4-byte NALU length size
-      out[5] = 0xE1; // 1 SPS
-      out[6] = (sps.length >> 8) & 0xff;
-      out[7] = sps.length & 0xff;
-      out.set(sps, 8);
-      const ppsOff = 8 + sps.length;
-      out[ppsOff] = 1; // 1 PPS
-      out[ppsOff + 1] = (pps.length >> 8) & 0xff;
-      out[ppsOff + 2] = pps.length & 0xff;
-      out.set(pps, ppsOff + 3);
-      return out;
-    }
-
-    _box(type, ...payloads) {
-      let size = 8;
-      for (const p of payloads) size += p.length;
-      const out = new Uint8Array(size);
-      const dv = new DataView(out.buffer);
-      dv.setUint32(0, size, false);
-      out[4] = type.charCodeAt(0);
-      out[5] = type.charCodeAt(1);
-      out[6] = type.charCodeAt(2);
-      out[7] = type.charCodeAt(3);
-      let off = 8;
-      for (const p of payloads) {
-        out.set(p, off);
-        off += p.length;
-      }
-      return out;
-    }
-
-    _u32(val) {
-      const b = new Uint8Array(4);
-      new DataView(b.buffer).setUint32(0, val >>> 0, false);
-      return b;
-    }
-
-    _u16(val) {
-      const b = new Uint8Array(2);
-      new DataView(b.buffer).setUint16(0, val & 0xffff, false);
-      return b;
-    }
-
-    finalize() {
-      const samples = this.videoSamples;
-      const totalTicks = samples.reduce((a, s) => a + s.duration, 0) || this.timescale;
-
-      // ftyp box (isom / iso2 / avc1 / mp41 - universally accepted by Android & iOS MediaScanner)
-      const ftyp = this._box(
-        'ftyp',
-        new TextEncoder().encode('isom'),
-        this._u32(0x200),
-        new TextEncoder().encode('isomiso2avc1mp41')
-      );
-
-      // Build stts (run-length compressed)
-      const sttsEntries = [];
-      for (const s of samples) {
-        const last = sttsEntries[sttsEntries.length - 1];
-        if (last && last.dur === s.duration) last.count++;
-        else sttsEntries.push({ count: 1, dur: s.duration });
-      }
-      const sttsBody = new Uint8Array(8 + sttsEntries.length * 8);
-      const sttsDv = new DataView(sttsBody.buffer);
-      sttsDv.setUint32(4, sttsEntries.length, false);
-      sttsEntries.forEach((e, i) => {
-        sttsDv.setUint32(8 + i * 8, e.count, false);
-        sttsDv.setUint32(12 + i * 8, e.dur, false);
-      });
-      const stts = this._box('stts', sttsBody);
-
-      // stss (sync/keyframe indices, 1-based)
-      const keyIndices = [];
-      samples.forEach((s, i) => { if (s.isKey) keyIndices.push(i + 1); });
-      if (!keyIndices.length && samples.length) keyIndices.push(1);
-      const stssBody = new Uint8Array(8 + keyIndices.length * 4);
-      const stssDv = new DataView(stssBody.buffer);
-      stssDv.setUint32(4, keyIndices.length, false);
-      keyIndices.forEach((idx, i) => stssDv.setUint32(8 + i * 4, idx, false));
-      const stss = this._box('stss', stssBody);
-
-      // stsc (1 chunk = all samples for single-chunk FastStart layout)
-      const stscBody = new Uint8Array(20);
-      const stscDv = new DataView(stscBody.buffer);
-      stscDv.setUint32(4, 1, false);
-      stscDv.setUint32(8, 1, false);
-      stscDv.setUint32(12, samples.length, false);
-      stscDv.setUint32(16, 1, false);
-      const stsc = this._box('stsc', stscBody);
-
-      // stsz (sample sizes)
-      const stszBody = new Uint8Array(12 + samples.length * 4);
-      const stszDv = new DataView(stszBody.buffer);
-      stszDv.setUint32(8, samples.length, false);
-      samples.forEach((s, i) => stszDv.setUint32(12 + i * 4, s.data.length, false));
-      const stsz = this._box('stsz', stszBody);
-
-      // avc1 + avcC
-      const avcCData = this.avcC || new Uint8Array([1, 0x42, 0xE0, 0x1F, 0xFF, 0xE0, 0x00]);
-      const avcCBox = this._box('avcC', avcCData);
-      const avc1Header = new Uint8Array(78);
-      const avc1Dv = new DataView(avc1Header.buffer);
-      avc1Dv.setUint16(6, 1, false); // data_reference_index
-      avc1Dv.setUint16(24, this.width, false);
-      avc1Dv.setUint16(26, this.height, false);
-      avc1Dv.setUint32(28, 0x00480000, false); // 72 dpi
-      avc1Dv.setUint32(32, 0x00480000, false);
-      avc1Dv.setUint16(40, 1, false); // frame_count
-      avc1Dv.setUint16(74, 0x0018, false); // depth 24
-      avc1Dv.setInt16(76, -1, false);
-      const avc1 = this._box('avc1', avc1Header, avcCBox);
-
-      const stsdHeader = new Uint8Array(8);
-      new DataView(stsdHeader.buffer).setUint32(4, 1, false);
-      const stsd = this._box('stsd', stsdHeader, avc1);
-
-      // mvhd (92 bytes payload)
-      const mvhdBody = new Uint8Array(100);
-      const mvhdDv = new DataView(mvhdBody.buffer);
-      mvhdDv.setUint32(12, this.timescale, false);
-      mvhdDv.setUint32(16, totalTicks, false);
-      mvhdDv.setUint32(20, 0x00010000, false); // rate 1.0
-      mvhdDv.setUint16(24, 0x0100, false); // volume 1.0
-      mvhdDv.setUint32(36, 0x00010000, false);
-      mvhdDv.setUint32(52, 0x00010000, false);
-      mvhdDv.setUint32(68, 0x40000000, false);
-      mvhdDv.setUint32(96, 2, false); // next_track_id
-      const mvhd = this._box('mvhd', mvhdBody);
-
-      // tkhd (84 bytes payload)
-      const tkhdBody = new Uint8Array(84);
-      const tkhdDv = new DataView(tkhdBody.buffer);
-      tkhdDv.setUint32(0, 0x00000003, false); // enabled + in_movie
-      tkhdDv.setUint32(12, 1, false); // track_id
-      tkhdDv.setUint32(20, totalTicks, false);
-      tkhdDv.setUint32(40, 0x00010000, false);
-      tkhdDv.setUint32(56, 0x00010000, false);
-      tkhdDv.setUint32(72, 0x40000000, false);
-      tkhdDv.setUint32(76, this.width << 16, false);
-      tkhdDv.setUint32(80, this.height << 16, false);
-      const tkhd = this._box('tkhd', tkhdBody);
-
-      // mdhd
-      const mdhdBody = new Uint8Array(24);
-      const mdhdDv = new DataView(mdhdBody.buffer);
-      mdhdDv.setUint32(12, this.timescale, false);
-      mdhdDv.setUint32(16, totalTicks, false);
-      mdhdDv.setUint16(20, 0x55C4, false); // und
-      const mdhd = this._box('mdhd', mdhdBody);
-
-      // hdlr
-      const hdlrBody = new Uint8Array(25);
-      hdlrBody.set(new TextEncoder().encode('vide'), 8);
-      const hdlr = this._box('hdlr', hdlrBody);
-
-      // vmhd + dinf
-      const vmhdBody = new Uint8Array(12);
-      vmhdBody[3] = 1;
-      const vmhd = this._box('vmhd', vmhdBody);
-      const urlBox = this._box('url ', new Uint8Array([0, 0, 0, 1]));
-      const drefHeader = new Uint8Array(8);
-      new DataView(drefHeader.buffer).setUint32(4, 1, false);
-      const dinf = this._box('dinf', this._box('dref', drefHeader, urlBox));
-
-      // First pass stco with placeholder 0 to compute exact moov size
-      const buildMoov = (mdatOffset) => {
-        const stcoBody = new Uint8Array(12);
-        const stcoDv = new DataView(stcoBody.buffer);
-        stcoDv.setUint32(4, 1, false);
-        stcoDv.setUint32(8, mdatOffset, false);
-        const stco = this._box('stco', stcoBody);
-        const stbl = this._box('stbl', stsd, stts, stss, stsc, stsz, stco);
-        const minf = this._box('minf', vmhd, dinf, stbl);
-        const mdia = this._box('mdia', mdhd, hdlr, minf);
-        const trak = this._box('trak', tkhd, mdia);
-        return this._box('moov', mvhd, trak);
-      };
-
-      const dummyMoov = buildMoov(0);
-      const mdatDataOffset = ftyp.length + dummyMoov.length + 8;
-      const moov = buildMoov(mdatDataOffset);
-
-      const mdatPayloadSize = samples.reduce((a, s) => a + s.data.length, 0);
-      const mdatHeader = new Uint8Array(8);
-      const mdatDv = new DataView(mdatHeader.buffer);
-      mdatDv.setUint32(0, 8 + mdatPayloadSize, false);
-      mdatHeader[4] = 0x6D; mdatHeader[5] = 0x64; mdatHeader[6] = 0x61; mdatHeader[7] = 0x74;
-
-      const blobParts = [ftyp, moov, mdatHeader];
-      for (const s of samples) blobParts.push(s.data);
-      return new Blob(blobParts, { type: 'video/mp4' });
-    }
-  }
-
-  function renderCompositeFrameToContext(targetCtx, outW, outH, timelineSec) {
+  function drawClipOnExportCanvas(targetCtx, outW, outH, clip, media, vid) {
     targetCtx.fillStyle = '#000000';
     targetCtx.fillRect(0, 0, outW, outH);
-    const info = getClipAtCompactTime(timelineSec);
-    if (info) {
-      const media = mediaPool.get(info.clip.id);
-      const vid = media && media.videoEl;
-      if (vid && vid.readyState >= 2) {
-        const srcTime = info.clip.trimStart + info.localTime * (info.clip.speed || 1);
-        const tf = getClipTransformAtSourceTime(info.clip, srcTime);
-        const vw = vid.videoWidth;
-        const vh = vid.videoHeight;
-        const fit = Math.min(outW / vw, outH / vh);
-        const dw = vw * fit * tf.zoom;
-        const dh = vh * fit * tf.zoom;
 
-        let stabX = 0, stabY = 0;
-        if (info.clip.stabLevel > 0 && media.stabVectors && media.stabVectors.length) {
-          const idx = Math.min(media.stabVectors.length - 1, Math.floor((srcTime / info.clip.rawDuration) * media.stabVectors.length));
-          const vec = media.stabVectors[idx];
-          const factor = info.clip.stabLevel / 100;
-          stabX = vec.dx * factor * outW * 0.04;
-          stabY = vec.dy * factor * outH * 0.04;
-        }
+    if (vid && vid.readyState >= 2 && vid.videoWidth > 0) {
+      const srcTime = Math.max(clip.trimStart, Math.min(clip.trimEnd, vid.currentTime || clip.trimStart));
+      const tf = getClipTransformAtSourceTime(clip, srcTime);
+      const vw = vid.videoWidth;
+      const vh = vid.videoHeight;
+      const fit = Math.min(outW / vw, outH / vh);
+      const dw = vw * fit * tf.zoom;
+      const dh = vh * fit * tf.zoom;
 
-        targetCtx.save();
-        targetCtx.translate(outW / 2 + tf.panX * outW + stabX, outH / 2 + tf.panY * outH + stabY);
-        if (tf.rot) targetCtx.rotate((tf.rot * Math.PI) / 180);
-        const crop = info.clip.cropScale || 1.0;
-        targetCtx.drawImage(
-          vid,
-          (vw * (1 - crop)) / 2, (vh * (1 - crop)) / 2, vw * crop, vh * crop,
-          -dw / 2, -dh / 2, dw, dh
-        );
-        targetCtx.restore();
+      let stabX = 0, stabY = 0;
+      if (clip.stabLevel > 0 && media && media.stabVectors && media.stabVectors.length) {
+        const idx = Math.min(media.stabVectors.length - 1, Math.floor((srcTime / clip.rawDuration) * media.stabVectors.length));
+        const vec = media.stabVectors[idx];
+        const factor = clip.stabLevel / 100;
+        stabX = vec.dx * factor * outW * 0.04;
+        stabY = vec.dy * factor * outH * 0.04;
       }
+
+      targetCtx.save();
+      targetCtx.translate(outW / 2 + tf.panX * outW + stabX, outH / 2 + tf.panY * outH + stabY);
+      if (tf.rot) targetCtx.rotate((tf.rot * Math.PI) / 180);
+      const crop = clip.cropScale || 1.0;
+      targetCtx.drawImage(
+        vid,
+        (vw * (1 - crop)) / 2, (vh * (1 - crop)) / 2, vw * crop, vh * crop,
+        -dw / 2, -dh / 2, dw, dh
+      );
+      targetCtx.restore();
     }
 
     if (state.textOverlay && state.textOverlay.text.trim()) {
@@ -4439,31 +4072,37 @@
     }
   }
 
-  function seekVideoExact(vid, targetTime) {
+  function waitVideoReadyAt(vid, targetSec) {
     return new Promise((resolve) => {
-      const clamped = Math.max(0, Math.min((vid.duration || targetTime) - 0.01, targetTime));
-      if (Math.abs(vid.currentTime - clamped) < 0.008 && vid.readyState >= 2) {
-        resolve();
+      const clamped = Math.max(0, Math.min((vid.duration || targetSec) - 0.02, targetSec));
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        vid.removeEventListener('seeked', onReady);
+        vid.removeEventListener('canplay', onReady);
+        clearTimeout(timer);
+        requestAnimationFrame(() => resolve());
+      };
+      const onReady = () => {
+        if (vid.readyState >= 2) done();
+      };
+      if (Math.abs(vid.currentTime - clamped) < 0.02 && vid.readyState >= 2) {
+        done();
         return;
       }
-      let done = false;
-      const finish = () => {
-        if (done) return;
-        done = true;
-        vid.removeEventListener('seeked', finish);
-        clearTimeout(t);
-        resolve();
-      };
-      vid.addEventListener('seeked', finish);
-      const t = setTimeout(finish, 350);
-      try { vid.currentTime = clamped; } catch (_) { finish(); }
+      vid.addEventListener('seeked', onReady);
+      vid.addEventListener('canplay', onReady);
+      const timer = setTimeout(done, 1200);
+      try { vid.currentTime = clamped; } catch (_) { done(); }
     });
   }
 
   document.getElementById('btnExport').addEventListener('click', async () => {
-    if (!state.clips.length) return;
+    if (!state.clips.length || state.isExporting) return;
     if (state.isPlaying) togglePlay(false);
 
+    state.isExporting = true;
     const firstClip = state.clips[0];
     const totalDur = getTotalDuration();
 
@@ -4485,19 +4124,18 @@
       outW = baseLongSide; outH = Math.round(baseLongSide * 0.75);
     }
 
-    // Ensure macroblock-friendly even dimensions (divisible by 2) for universal H.264 hardware decoders
     outW = outW % 2 === 0 ? outW : outW + 1;
     outH = outH % 2 === 0 ? outH : outH + 1;
 
     const origBytesPerSec = firstClip.fileSize && firstClip.rawDuration
       ? (firstClip.fileSize * 8) / firstClip.rawDuration
       : 8_000_000;
-    const targetBitrate = Math.max(2_500_000, Math.min(28_000_000, Math.round(origBytesPerSec)));
+    const targetBitrate = Math.max(3_000_000, Math.min(25_000_000, Math.round(origBytesPerSec)));
 
     const modal = document.getElementById('exportModal');
     const fill = document.getElementById('exportProgressFill');
     const pctText = document.getElementById('exportPercentText');
-    document.getElementById('exportResInfo').textContent = `${outW}×${outH} • MP4 Universal (H.264)`;
+    document.getElementById('exportResInfo').textContent = `${outW}×${outH} • Video & Audio Asli`;
     modal.style.display = 'flex';
     fill.style.width = '0%';
     pctText.textContent = '0%';
@@ -4517,155 +4155,192 @@
       setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-      }, 2000);
+      }, 2500);
     };
 
-    // Primary Path: Hardware/Standard WebCodecs H.264 Baseline/Main + ISO-BMFF FastStart MP4 Muxer
-    // Produces true standard .mp4 playable in Samsung Gallery, Android, iPhone, WhatsApp, Instagram, & PC!
-    if (typeof VideoEncoder !== 'undefined' && typeof VideoFrame !== 'undefined') {
-      try {
-        const fps = 30;
-        const totalFrames = Math.max(1, Math.ceil(totalDur * fps));
-        const frameDurUs = Math.round(1_000_000 / fps);
-        const muxer = new UniversalMP4Muxer(outW, outH, fps);
-
-        const codecsToTry = [
-          'avc1.42E01F', // Baseline Profile Level 3.1 (most universally supported across all devices)
-          'avc1.420028', // Baseline Profile Level 4.0 (1080p+)
-          'avc1.4D4028', // Main Profile Level 4.0
-          'avc1.640028'  // High Profile Level 4.0
-        ];
-
-        let selectedCodec = null;
-        for (const c of codecsToTry) {
-          const sup = await VideoEncoder.isConfigSupported({
-            codec: c,
-            width: outW,
-            height: outH,
-            bitrate: targetBitrate,
-            framerate: fps
-          });
-          if (sup && sup.supported) {
-            selectedCodec = c;
-            break;
-          }
-        }
-
-        if (selectedCodec) {
-          let encodeError = null;
-          const encoder = new VideoEncoder({
-            output: (chunk) => {
-              const buf = new Uint8Array(chunk.byteLength);
-              chunk.copyTo(buf);
-              muxer.addVideoChunk(buf, chunk.type === 'key', chunk.timestamp, chunk.duration || frameDurUs);
-            },
-            error: (err) => { encodeError = err; }
-          });
-
-          encoder.configure({
-            codec: selectedCodec,
-            width: outW,
-            height: outH,
-            bitrate: targetBitrate,
-            framerate: fps,
-            avc: { format: 'annexb' }
-          });
-
-          for (let f = 0; f < totalFrames; f++) {
-            if (encodeError) throw encodeError;
-            const tSec = Math.min(totalDur, f / fps);
-            const info = getClipAtCompactTime(tSec);
-            if (info) {
-              const media = mediaPool.get(info.clip.id);
-              if (media && media.videoEl) {
-                const srcTime = info.clip.trimStart + info.localTime * (info.clip.speed || 1);
-                await seekVideoExact(media.videoEl, srcTime);
-              }
-            }
-
-            renderCompositeFrameToContext(expCtx, outW, outH, tSec);
-            const vFrame = new VideoFrame(expCanvas, {
-              timestamp: f * frameDurUs,
-              duration: frameDurUs
-            });
-            encoder.encode(vFrame, { keyFrame: f % 30 === 0 });
-            vFrame.close();
-
-            if (encoder.encodeQueueSize > 8) {
-              await new Promise(r => setTimeout(r, 12));
-            }
-
-            if (f % 3 === 0 || f === totalFrames - 1) {
-              const pct = Math.min(99, Math.round(((f + 1) / totalFrames) * 100));
-              fill.style.width = `${pct}%`;
-              pctText.textContent = `${pct}%`;
-              await new Promise(r => setTimeout(r, 0));
-            }
-          }
-
-          await encoder.flush();
-          encoder.close();
-
-          const mp4Blob = muxer.finalize();
-          fill.style.width = '100%';
-          pctText.textContent = '100%';
-          downloadBlob(mp4Blob, `Bluu Studio_${Date.now()}.mp4`);
-          modal.style.display = 'none';
-          seekToTime(0);
-          showToast('Video MP4 berhasil disimpan ke Galeri');
-          return;
-        }
-      } catch (err) {
-        console.warn('WebCodecs MP4 fallback to MediaRecorder:', err);
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!sharedExportAudioCtx || sharedExportAudioCtx.state === 'closed') {
+        sharedExportAudioCtx = new AudioCtx();
       }
-    }
+      if (sharedExportAudioCtx.state === 'suspended') {
+        await sharedExportAudioCtx.resume();
+      }
 
-    // Fallback Path for older browsers without WebCodecs
-    const stream = expCanvas.captureStream(30);
-    const mimeCandidates = [
-      'video/mp4;codecs=avc1.42E01E',
-      'video/mp4',
-      'video/webm;codecs=h264',
-      'video/webm'
-    ];
-    const mimeType = mimeCandidates.find(m => MediaRecorder.isTypeSupported(m)) || '';
-    const recorder = new MediaRecorder(stream, {
-      mimeType: mimeType || undefined,
-      videoBitsPerSecond: targetBitrate
-    });
+      const audioDest = sharedExportAudioCtx.createMediaStreamDestination();
+      const connectedNodes = [];
 
-    const chunks = [];
-    recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = () => {
+      // Prepare first clip video frame BEFORE starting recorder so frame 0 is guaranteed visible (not black)
+      const firstMedia = mediaPool.get(firstClip.id);
+      if (firstMedia && firstMedia.videoEl) {
+        await waitVideoReadyAt(firstMedia.videoEl, firstClip.trimStart);
+        drawClipOnExportCanvas(expCtx, outW, outH, firstClip, firstMedia, firstMedia.videoEl);
+      }
+
+      // Route BGM / Extracted Audio if present
+      let exportBgmEl = null;
+      if (state.bgmBlob) {
+        exportBgmEl = new Audio(URL.createObjectURL(state.bgmBlob));
+        exportBgmEl.loop = true;
+        exportBgmEl.volume = 1.0;
+        const bgmSrc = sharedExportAudioCtx.createMediaElementSource(exportBgmEl);
+        const bgmGain = sharedExportAudioCtx.createGain();
+        bgmGain.gain.value = Math.max(0, Math.min(2, state.bgmVolume ?? 1));
+        bgmSrc.connect(bgmGain);
+        bgmGain.connect(audioDest);
+        connectedNodes.push(bgmSrc, bgmGain);
+      }
+
+      const canvasStream = expCanvas.captureStream(30);
+      const combinedTracks = [
+        ...canvasStream.getVideoTracks(),
+        ...audioDest.stream.getAudioTracks()
+      ];
+      const combinedStream = new MediaStream(combinedTracks);
+
+      const mimeCandidates = [
+        'video/mp4;codecs=avc1,mp4a.40.2',
+        'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+        'video/mp4',
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm'
+      ];
+      const mimeType = mimeCandidates.find(m => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) || '';
+
+      const chunks = [];
+      const recorder = new MediaRecorder(combinedStream, {
+        mimeType: mimeType || undefined,
+        videoBitsPerSecond: targetBitrate,
+        audioBitsPerSecond: 192_000
+      });
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      const recordingStopped = new Promise((resolve) => {
+        recorder.onstop = () => resolve();
+      });
+
+      recorder.start(250);
+      if (exportBgmEl) {
+        exportBgmEl.play().catch(() => {});
+      }
+
+      let elapsedBeforeClip = 0;
+
+      // Sequentially play each clip smoothly from trimStart to trimEnd so hardware decoder renders every frame AND captures real audio
+      for (let i = 0; i < state.clips.length; i++) {
+        const clip = state.clips[i];
+        const media = mediaPool.get(clip.id);
+        const vid = media && media.videoEl;
+        const clipDur = getClipDuration(clip);
+
+        if (!vid) {
+          elapsedBeforeClip += clipDur;
+          continue;
+        }
+
+        // Pause other videos
+        mediaPool.forEach((m, id) => {
+          if (id !== clip.id && !m.videoEl.paused) m.videoEl.pause();
+        });
+
+        await waitVideoReadyAt(vid, clip.trimStart);
+
+        // Route this clip's audio to Web Audio mixer
+        let srcNode = mediaAudioSourceCache.get(vid);
+        if (!srcNode) {
+          srcNode = sharedExportAudioCtx.createMediaElementSource(vid);
+          mediaAudioSourceCache.set(vid, srcNode);
+        }
+        const gainNode = sharedExportAudioCtx.createGain();
+        gainNode.gain.value = clip.muted ? 0 : Math.max(0, Math.min(2, clip.volume ?? 1));
+        srcNode.connect(gainNode);
+        gainNode.connect(audioDest);
+        connectedNodes.push(gainNode);
+
+        // Must be unmuted for Web Audio MediaElementSource to output audio samples
+        vid.muted = false;
+        vid.volume = 1.0;
+        vid.playbackRate = Math.max(0.25, Math.min(4.0, clip.speed || 1.0));
+
+        drawClipOnExportCanvas(expCtx, outW, outH, clip, media, vid);
+        await vid.play().catch(() => {});
+
+        await new Promise((resolveClip) => {
+          let finished = false;
+          const finishClip = () => {
+            if (finished) return;
+            finished = true;
+            vid.pause();
+            try { srcNode.disconnect(gainNode); } catch (_) {}
+            try { gainNode.disconnect(); } catch (_) {}
+            resolveClip();
+          };
+
+          const startWall = performance.now();
+          const renderStep = () => {
+            if (finished) return;
+            const wallElapsed = (performance.now() - startWall) / 1000;
+            const curSrc = vid.currentTime;
+
+            if (vid.readyState >= 2) {
+              drawClipOnExportCanvas(expCtx, outW, outH, clip, media, vid);
+            }
+
+            const totalProgressSec = Math.min(totalDur, elapsedBeforeClip + Math.min(clipDur, wallElapsed));
+            const pct = Math.min(99, Math.round((totalProgressSec / Math.max(0.1, totalDur)) * 100));
+            fill.style.width = `${pct}%`;
+            pctText.textContent = `${pct}%`;
+
+            if (curSrc >= clip.trimEnd - 0.03 || vid.ended || wallElapsed >= clipDur + 0.12) {
+              finishClip();
+              return;
+            }
+            requestAnimationFrame(renderStep);
+          };
+
+          requestAnimationFrame(renderStep);
+        });
+
+        elapsedBeforeClip += clipDur;
+      }
+
+      if (exportBgmEl) {
+        exportBgmEl.pause();
+      }
+      connectedNodes.forEach(n => { try { n.disconnect(); } catch (_) {} });
+
+      fill.style.width = '100%';
+      pctText.textContent = '100%';
+      await new Promise(r => setTimeout(r, 150));
+
+      if (recorder.state !== 'inactive') {
+        recorder.stop();
+      }
+      await recordingStopped;
+
       const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-      const blob = new Blob(chunks, { type: mimeType || 'video/mp4' });
-      downloadBlob(blob, `Bluu Studio_${Date.now()}.${ext}`);
+      const outBlob = new Blob(chunks, { type: mimeType || 'video/mp4' });
+      downloadBlob(outBlob, `Bluu Studio_${Date.now()}.${ext}`);
+      showToast('Video & audio berhasil disimpan ke Galeri');
+    } catch (err) {
+      console.error('Export error:', err);
+      showToast('Gagal mengekspor video, coba lagi');
+    } finally {
+      state.isExporting = false;
       modal.style.display = 'none';
+      // Reconnect normal speaker output for preview playback
+      mediaPool.forEach((m) => {
+        const srcNode = mediaAudioSourceCache.get(m.videoEl);
+        if (srcNode && sharedExportAudioCtx) {
+          try { srcNode.connect(sharedExportAudioCtx.destination); } catch (_) {}
+        }
+      });
       seekToTime(0);
-      showToast('Video berhasil diekspor');
-    };
-
-    recorder.start(200);
-    const startWall = performance.now();
-
-    function stepFallback() {
-      const elapsed = (performance.now() - startWall) / 1000;
-      if (elapsed >= totalDur) {
-        fill.style.width = '100%';
-        pctText.textContent = '100%';
-        setTimeout(() => recorder.stop(), 120);
-        return;
-      }
-      state.currentTime = elapsed;
-      syncVideoToPlayhead(false);
-      renderCompositeFrameToContext(expCtx, outW, outH, elapsed);
-      const pct = Math.min(99, Math.round((elapsed / totalDur) * 100));
-      fill.style.width = `${pct}%`;
-      pctText.textContent = `${pct}%`;
-      requestAnimationFrame(stepFallback);
     }
-
-    requestAnimationFrame(stepFallback);
   });
 
   /* ==================== AUTO-SAVE DRAFTS & LAUNCHER ==================== */
@@ -4809,7 +4484,6 @@
     }
   });
 
-  // Boot
   renderDraftsLauncher();
   requestAnimationFrame(mainLoop);
 })();
